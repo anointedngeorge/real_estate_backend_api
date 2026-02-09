@@ -1,9 +1,10 @@
 from ninja import NinjaAPI, Router
 # Import and include your app-specific routers here
 from api.config.jwt_config import decode_jwt_token
+from api.lib.message import XResponse
 from api.views.users import router as users_router
 from api.views.auth import router as auth_router
-from ninja.errors import ValidationError
+from ninja.errors import ValidationError, AuthenticationError
 from ninja.responses import Response
 from ninja.security import HttpBearer
 from decouple import config
@@ -16,23 +17,26 @@ class GlobalAuthentication(HttpBearer):
     
     # Override the authenticate method to decode the JWT token and retrieve the user
     def authenticate(self, request, token):
-        secret_key = config('SECRET_KEY', default='django-insecure-f2^)s*hn*y_rix*@7vtk(srq_cbrkex@xr98!&+-+d9!!ft7+c')
-        token_decode = decode_jwt_token(token, secret_key=secret_key)
+        try:
+            secret_key = config('SECRET_KEY', default='django-insecure-f2^)s*hn*y_rix*@7vtk(srq_cbrkex@xr98!&+-+d9!!ft7+c')
+            token_decode = decode_jwt_token(token, secret_key=secret_key)
         
-        if BlackListedTokens.objects.filter(jti=token_decode.get("jti"), token=token).exists():
+            if token_decode is None:
+                return None
+            
+            if BlackListedTokens.objects.filter(token=token).exists():
+                return None
+            
+            user_id = token_decode.get("sub")
+            user = User.objects.filter(id=user_id, email=token_decode.get("email"))
+            
+            if not user.exists():
+                return None
+            
+            return user.first()
+        except Exception as e:
+            print("failed to authenticate user...", e)
             return None
-        
-        if token_decode is None:
-            return None
-
-        
-        user_id = token_decode.get("sub")
-        user = User.objects.filter(id=user_id, email=token_decode.get("email"))
-        
-        if not user.exists():
-            return None
-        
-        return user.first()
 
 
 
@@ -59,6 +63,12 @@ def global_handler(request, exc):
         {"detail": "Internal server error"},
         status=500
     )
+    
+
+
+@api.exception_handler(AuthenticationError)
+def global_handler_authorization(request, exc):
+    return XResponse(status_code=401, data=None, message="Unauthorized", status=False).response
 
 
 

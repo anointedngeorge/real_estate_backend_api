@@ -3,6 +3,7 @@ import uuid
 from ninja import  Form, Router
 
 from api.config.jwt_config import decode_jwt_token, generate_access_token, generate_refresh_token
+from api.lib.message import XResponse
 from api.models.users import User
 from api.schema.usersSchema import LoginSerializer, SignupSerializer, UserSerializer
 from decouple import config
@@ -115,11 +116,10 @@ def refresh_token(request, refresh_token: str  ):
 def get_user(request):
 
     try:
-        user = request.auth
-        print(user)
-        
+        user = request.auth    
+            
         if user is None:
-            return 400, {"result": "User not authenticated"}
+            return XResponse(status_code=400, data=None, message="User not authenticated", status=False).response
         
         dt = {
             "id": user.id,
@@ -130,7 +130,7 @@ def get_user(request):
             "role": user.role
         }
         user_data = UserSerializer.model_validate(dt).model_dump()
-        return 200, {"user": user_data}
+        return XResponse(status_code=200, data=user_data, message="Successful", status=True).response
     
     except Exception as e:
-        return 400, {"result": str(e)}
+        return XResponse(status_code=400, data=None, message="Error occurred", status=False).response

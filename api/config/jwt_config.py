@@ -10,6 +10,7 @@ CLOCK_SKEW = timedelta(seconds=30)
 
 def generate_access_token(user, secret_key, algorithm="HS256"):
     now = datetime.now(timezone.utc)
+    jti = str(uuid.uuid4())
 
     payload = {
         "sub": str(user.id),
@@ -19,6 +20,7 @@ def generate_access_token(user, secret_key, algorithm="HS256"):
         "iat": now,
         "exp": now + timedelta(minutes=15),
         "aud": "auth",
+        "jti": jti,
         "iss": APP,
     }
 
@@ -60,7 +62,6 @@ def decode_jwt_token(
     """
     Decodes and validates a JWT with strict max-age enforcement.
     """
-
     try:
         payload = jwt.decode(
             token,
@@ -69,7 +70,7 @@ def decode_jwt_token(
             audience="auth",
             issuer=APP,
             options={
-                "require": ["exp", "iat", "sub"],
+                "require": ["exp", "iat", "sub",'jti'],
             },
         )
 
@@ -94,17 +95,18 @@ def decode_jwt_token(
             raise jwt.ExpiredSignatureError("Token exceeds max age")
 
         # ---- OPTIONAL REVOCATION CHECK ----
-        jti = payload.get("jti")
+        jti = payload.get("jti", None)
+        
         if jti and is_token_revoked(jti):
             raise jwt.InvalidTokenError("Token revoked")
 
         return payload
 
     except jwt.ExpiredSignatureError as e:
-        print("Token expired:", jti)
-        BlackListedTokens.objects.create(jti=jti, token=token)
+        print("Token expired:")
+        BlackListedTokens.objects.update_or_create(token=token)
         return None
 
     except jwt.InvalidTokenError as e:
-        # print("Token invalid:", e)
+        print("Token invalid:", e)
         return None

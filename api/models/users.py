@@ -40,6 +40,6 @@ class UserKyc(BaseModel):
 
 
 class BlackListedTokens(BaseModel):
-    jti = models.CharField(max_length=255, unique=True)
+    jti = models.CharField(max_length=255, null=True, blank=True)
     token = models.TextField()
     
