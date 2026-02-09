@@ -1,0 +1,25 @@
+
+### user login test
+POST http://localhost:8000/api/v1/auth/signin
+Content-Type: application/json  
+
+{
+    "username": "anointedngeorge@gmail.com",
+    "password": "password0"
+}
+
+
+
+### user registration test
+POST http://localhost:8000/api/v1/auth/signup
+Content-Type: application/json  
+
+{
+  "first_name": "Emeka",
+  "last_name": "Matthew",
+  "phone_number": "+7803919161922",
+  "email": "emekamatthew@example.com",
+  "password": "password1",
+  "role": "buyer",
+  "has_agreed_terms": false
+}
