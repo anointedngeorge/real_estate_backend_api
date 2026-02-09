@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import date, datetime
+from typing import Any, List, Optional
 import uuid
 from ninja import Schema, Field
 from pydantic import BaseModel
@@ -65,6 +66,12 @@ class SignupSerializer(Schema):
     
     
     
+class LoginTrackerSerializer(BaseModel):
+    id: uuid.UUID
+    agent: str
+    location: str
+    created_at: datetime
+    platform: str
 
 
 
@@ -75,6 +82,7 @@ class UserSerializer(BaseModel):
     first_name: str
     last_name: str
     role: str
+    login_histories: Any
 
     class from_attributes:
         orm_mode = True

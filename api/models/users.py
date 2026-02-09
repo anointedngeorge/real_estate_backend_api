@@ -1,4 +1,5 @@
 import uuid
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -26,8 +27,14 @@ class User(AbstractUser):
     
 
     def __str__(self):
-        return self.email
+        return self.first_name + " " + self.last_name
     
+    def get_fullname(self):
+        return self.first_name + " " + self.last_name
+    
+    def login_histories(self):
+        hist = self.user_login_tracker.all()        
+        return [{"user":x.user.get_fullname(), "agent":x.agent, "location":x.location, "platform":x.platform, "l_date": x.created_at} for x in hist]
     
     
 
@@ -36,7 +43,15 @@ class UserKyc(BaseModel):
     picture = models.CharField(max_length=255, null=True, blank=True)
     
     
-    
+
+
+class LoginTracker(BaseModel):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="user_login_tracker")
+    agent = models.TextField()
+    location = models.CharField(max_length=255, null=True, blank=True)
+    platform = models.CharField(max_length=255, null=True, blank=True)
+
+
 
 
 class BlackListedTokens(BaseModel):

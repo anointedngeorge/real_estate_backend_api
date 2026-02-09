@@ -23,7 +23,7 @@ class GlobalAuthentication(HttpBearer):
         
             if token_decode is None:
                 return None
-            
+ 
             if BlackListedTokens.objects.filter(token=token).exists():
                 return None
             

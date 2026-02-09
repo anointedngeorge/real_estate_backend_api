@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import uuid
 
+from api.helpers.dbfunc import createBlackListedTokens
 from api.models.users import  BlackListedTokens
 
 APP = "api"
@@ -104,7 +105,7 @@ def decode_jwt_token(
 
     except jwt.ExpiredSignatureError as e:
         print("Token expired:")
-        BlackListedTokens.objects.update_or_create(token=token)
+        createBlackListedTokens(token=token)
         return None
 
     except jwt.InvalidTokenError as e:

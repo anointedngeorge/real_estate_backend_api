@@ -3,8 +3,9 @@ import uuid
 from ninja import  Form, Router
 
 from api.config.jwt_config import decode_jwt_token, generate_access_token, generate_refresh_token
+from api.helpers.dbfunc import createBlackListedTokens
 from api.lib.message import XResponse
-from api.models.users import User
+from api.models.users import LoginTracker, User
 from api.schema.usersSchema import LoginSerializer, SignupSerializer, UserSerializer
 from decouple import config
 
@@ -29,21 +30,34 @@ def auth_signin(request, data: LoginSerializer ):
             user = user.first()
             
             if not user.check_password(password):
-                return 400, {"result": "Invalid Password"}
+                return  XResponse(status_code=400, data=None, message="Incorrect Password", status=False).response
             
             token = generate_access_token(user=user, secret_key=secret_key)
             refresh_token, jti = generate_refresh_token(user=user, secret_key=secret_key)    
             
+            
+            u = request.META
+            AGENT = u.get("HTTP_USER_AGENT", "...")
+            HTTP_SEC_CH_UA_PLATFORM = u.get("HTTP_SEC_CH_UA_PLATFORM", "...")
+            REMOTE_ADDR = u.get("REMOTE_ADDR", "...")
+            
+            
+            #track users login history
+            LoginTracker.objects.update_or_create(
+                user=user,
+                agent=AGENT,
+                location=REMOTE_ADDR,
+                platform=HTTP_SEC_CH_UA_PLATFORM
+            )
             return 200, {
                 "access_token": token,
                 "refresh_token": refresh_token,
                 "jti": jti
             }
         else:
-            return 400, {"result": "Invalid credentials"}
+            return XResponse(status_code=400, data=None, message="Invalid credentials", status=False).response
     except Exception as e:
-        # print("Error during signin:", str(e))
-        return 400, {"result": str(e)}
+        return XResponse(status_code=400, data=None, message="Error While Signing in", status=False).response
 
 
 
@@ -61,7 +75,7 @@ def auth_signup(request, data: SignupSerializer):
 
         user = User.objects 
         if user.filter(email=data.email).exists():
-            return 400, {"result": "Email already exists"}
+            return XResponse(status_code=400, data=None, message="Email already exists", status=False).response
         
         
         username_generated = username(data.first_name, data.last_name)  
@@ -81,7 +95,7 @@ def auth_signup(request, data: SignupSerializer):
         return 200, {"result": f"User {user_created.username} created successfully"}
     
     except Exception as e:
-        return 400, {"result": str(e)}
+        return XResponse(status_code=400, data=None, message="Email already exists", status=False).response
     
     
     
@@ -94,21 +108,20 @@ def refresh_token(request, refresh_token: str  ):
         token_decode = decode_jwt_token(refresh_token, secret_key=secret_key)
         
         if token_decode is None or token_decode.get("type") != "refresh":
-            return 400, {"result": "Invalid refresh token"} 
+            return XResponse(status_code=400, data=None, message="Invalid refresh token", status=False).response
         
         user_id = token_decode.get("sub")
         user = User.objects.filter(id=user_id)
         
         if not user.exists():
-            return 400, {"result": "User not found"}
+            return XResponse(status_code=400, data=None, message="User not found", status=False).response
         user = user.first()
         
         new_access_token = generate_access_token(user=user, secret_key=secret_key)
         return 200, {"access_token": new_access_token}
     
     except Exception as e:
-        return 400, {"result": str(e)}
-    
+        return XResponse(status_code=500, data=None, message="An error occurred", status=False).response
 
 
 
@@ -117,9 +130,14 @@ def get_user(request):
 
     try:
         user = request.auth    
-            
+        
         if user is None:
             return XResponse(status_code=400, data=None, message="User not authenticated", status=False).response
+        
+        
+        user_object = User.objects.get(id=user.id)
+        hist = user_object.login_histories()
+        
         
         dt = {
             "id": user.id,
@@ -127,10 +145,31 @@ def get_user(request):
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
-            "role": user.role
+            "role": user.role,
+            "login_histories": hist
         }
+        
         user_data = UserSerializer.model_validate(dt).model_dump()
         return XResponse(status_code=200, data=user_data, message="Successful", status=True).response
+    
+    except Exception as e:
+        return XResponse(status_code=400, data=None, message="Error occurred", status=False).response
+    
+    
+    
+
+
+@router.post("/signout", response={200: dict, 400: dict})
+def signout_user(request):
+    try:
+        user = request.auth
+        token = request.META.get("HTTP_AUTHORIZATION", None).split("Bearer")[1]
+        
+        if user is None:
+            return XResponse(status_code=400, data=None, message="User not authenticated", status=False).response
+        
+        createBlackListedTokens(token=token.lstrip(" "))
+        return XResponse(status_code=200, data=None, message="Successful logged out.", status=True).response
     
     except Exception as e:
         return XResponse(status_code=400, data=None, message="Error occurred", status=False).response
