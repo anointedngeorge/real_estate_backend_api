@@ -6,9 +6,9 @@ from api.config.jwt_config import decode_jwt_token, generate_access_token, gener
 from api.helpers.dbfunc import createBlackListedTokens
 from api.lib.message import XResponse
 from api.models.users import LoginTracker, User
-from api.schema.usersSchema import LoginSerializer, SignupSerializer, UserSerializer
+from api.schema.usersSchema import LoginSerializer, SignupSerializer, UserSerializer, UserUpdateSerializer
 from decouple import config
-
+from ninja.errors import HttpError
 
 router = Router(tags=["Authentication"])
 
@@ -43,12 +43,18 @@ def auth_signin(request, data: LoginSerializer ):
             
             
             #track users login history
-            LoginTracker.objects.update_or_create(
+            lTracker = LoginTracker.objects.filter(
                 user=user,
-                agent=AGENT,
-                location=REMOTE_ADDR,
-                platform=HTTP_SEC_CH_UA_PLATFORM
+                agent=AGENT
             )
+            
+    
+            LoginTracker.objects.update_or_create(
+                    user=user,
+                    agent=AGENT,
+                    location=REMOTE_ADDR,
+                    platform=HTTP_SEC_CH_UA_PLATFORM
+                )
             return 200, {
                 "access_token": token,
                 "refresh_token": refresh_token,
@@ -57,11 +63,13 @@ def auth_signin(request, data: LoginSerializer ):
         else:
             return XResponse(status_code=400, data=None, message="Invalid credentials", status=False).response
     except Exception as e:
+        # print(e)
         return XResponse(status_code=400, data=None, message="Error While Signing in", status=False).response
 
 
 
 def username(first_name, last_name):
+    
     st = str(first_name) + str(last_name).lower()
     st_list = list(st)
     shuffle(st_list)
@@ -99,8 +107,6 @@ def auth_signup(request, data: SignupSerializer):
     
     
     
-
-
 @router.post("/refresh_token", response={200: dict, 400: dict}, auth=None)
 def refresh_token(request, refresh_token: str  ):
     try:
@@ -146,7 +152,10 @@ def get_user(request):
             "first_name": user.first_name,
             "last_name": user.last_name,
             "role": user.role,
+            "phone_number":user_object.phone_number,
+            'date_joined': user_object.date_joined,
             "login_histories": hist
+            
         }
         
         user_data = UserSerializer.model_validate(dt).model_dump()
@@ -173,3 +182,54 @@ def signout_user(request):
     
     except Exception as e:
         return XResponse(status_code=400, data=None, message="Error occurred", status=False).response
+    
+    
+
+
+
+
+@router.put("/updateSignedUser", response={200: dict, 400: dict, 401: dict})
+def auth_update_signed_user(request, data: UserUpdateSerializer):
+    
+    if not request.auth:
+        raise HttpError(401, "Unauthorized")
+
+    try:
+        user = User.objects.get(id=request.auth.id)
+
+        # remove None values only
+        payload = {
+            k: v for k, v in data.model_dump().items()
+            if v is not None
+        }
+
+        for attr, value in payload.items():
+            setattr(user, attr, value)
+
+        user.save()
+
+        user_data = UserSerializer.model_validate(user).model_dump(exclude={"login_histories", "date_joined", "id", "email","role","username"})
+        # print(user_data)
+        return XResponse(
+            status_code=200,
+            data=user_data,
+            message="User updated successfully",
+            status=True,
+        ).response
+
+    except User.DoesNotExist:
+        return XResponse(
+            status_code=400,
+            data=None,
+            message="User not found",
+            status=False,
+        ).response
+
+    except Exception as e:
+        # print("Update user error:", e)
+        return XResponse(
+            status_code=400,
+            data=None,
+            message="An error occurred while updating user",
+            status=False,
+        ).response

@@ -4,6 +4,8 @@ from api.config.jwt_config import decode_jwt_token
 from api.lib.message import XResponse
 from api.views.users import router as users_router
 from api.views.auth import router as auth_router
+from api.views.system_settings import router as system_router
+
 from ninja.errors import ValidationError, AuthenticationError
 from ninja.responses import Response
 from ninja.security import HttpBearer
@@ -74,3 +76,4 @@ def global_handler_authorization(request, exc):
 
 api.add_router(router=auth_router, prefix="/auth")
 api.add_router(router=users_router, prefix="/users")
+api.add_router(router=system_router, prefix="/system")

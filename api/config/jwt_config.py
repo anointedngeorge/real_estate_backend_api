@@ -6,7 +6,7 @@ from api.helpers.dbfunc import createBlackListedTokens
 from api.models.users import  BlackListedTokens
 
 APP = "api"
-MAX_ACCESS_TOKEN_AGE = timedelta(minutes=15)
+MAX_ACCESS_TOKEN_AGE = timedelta(minutes=30)
 CLOCK_SKEW = timedelta(seconds=30)
 
 def generate_access_token(user, secret_key, algorithm="HS256"):

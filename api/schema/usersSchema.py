@@ -82,7 +82,19 @@ class UserSerializer(BaseModel):
     first_name: str
     last_name: str
     role: str
+    phone_number:str
+    date_joined: datetime
     login_histories: Any
 
-    class from_attributes:
-        orm_mode = True
+    class Config:
+        from_attributes = True
+        
+
+
+class UserUpdateSerializer(BaseModel):
+    first_name: str = None
+    last_name: str = None
+    phone_number:str = Field(None, pattern=r'^\+?1?\d{9,15}$')
+
+    class Config:
+        from_attributes = True
