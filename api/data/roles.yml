@@ -1,0 +1,26 @@
+roles:
+  super_admin:
+    - "*"
+
+  admin:
+    - users.view
+    - users.create
+    - users.edit
+    - users.delete
+    - properties.manage
+
+  manager:
+    - users.view
+    - properties.view
+    - properties.edit
+    - reports.view
+
+  agent:
+    - properties.view
+    - properties.create
+    - leads.view
+
+  accountant:
+    - invoices.view
+    - invoices.create
+    - reports.finance

@@ -1,22 +1,23 @@
 from random import shuffle
 import uuid
+from django.db import Error
 from ninja import  Form, Router
 
 from api.config.jwt_config import decode_jwt_token, generate_access_token, generate_refresh_token
 from api.helpers.dbfunc import createBlackListedTokens
 from api.lib.message import XResponse
 from api.models.users import LoginTracker, User
-from api.schema.usersSchema import LoginSerializer, SignupSerializer, UserSerializer, UserUpdateSerializer
+from api.schema.usersSchema import LoginSchema, LoginSerializer, SignupSerializer, UserSerializer, UserUpdateSerializer, XResponseSchema
 from decouple import config
 from ninja.errors import HttpError
 
-router = Router(tags=["Authentication"])
+router = Router(tags=["Administration/Authentication"])
 
 
 
 
 
-@router.post("/signin", response={200: dict, 400: dict}, auth=None)
+@router.post("/signin", response={200: LoginSchema, 400: XResponseSchema}, auth=None)
 def auth_signin(request, data: LoginSerializer ):
     try:
         username = data.username
@@ -24,7 +25,7 @@ def auth_signin(request, data: LoginSerializer ):
         
         secret_key = config('SECRET_KEY', default='django-insecure-f2^)s*hn*y_rix*@7vtk(srq_cbrkex@xr98!&+-+d9!!ft7+c')
         
-        user = User.objects.filter(email=username)
+        user = User.objects.filter(email=username, is_superuser=True, is_active=True)
                 
         if user.exists():
             user = user.first()
@@ -43,10 +44,10 @@ def auth_signin(request, data: LoginSerializer ):
             
             
             #track users login history
-            lTracker = LoginTracker.objects.filter(
-                user=user,
-                agent=AGENT
-            )
+            # LoginTracker.objects.filter(
+            #     user=user,
+            #     agent=AGENT
+            # )
             
     
             LoginTracker.objects.update_or_create(
@@ -77,13 +78,14 @@ def username(first_name, last_name):
 
 
 
-@router.post("/signup", auth=None, response={200: dict, 400: dict})
+@router.post("/signup", auth=None, response={200: dict, 400: XResponseSchema})
 def auth_signup(request, data: SignupSerializer):
     try:
 
-        user = User.objects 
+        user = User.objects.all()
         if user.filter(email=data.email).exists():
-            return XResponse(status_code=400, data=None, message="Email already exists", status=False).response
+            # print("User exists")
+            return XResponse(status_code=400, data=None, message="Email already exists...", status=False).response
         
         
         username_generated = username(data.first_name, data.last_name)  
@@ -100,10 +102,11 @@ def auth_signup(request, data: SignupSerializer):
         user_created.set_password(password)
         user_created.save()
         
-        return 200, {"result": f"User {user_created.username} created successfully"}
+        message = f"User {user_created.username} created successfully"
+        return XResponse(status_code=200, data=None, message=message, status=True).response
     
     except Exception as e:
-        return XResponse(status_code=400, data=None, message="Email already exists", status=False).response
+        return XResponse(status_code=400, data=None, message=e, status=False).response
     
     
     
@@ -131,35 +134,17 @@ def refresh_token(request, refresh_token: str  ):
 
 
 
-@router.get("/me", response={200: dict, 400: dict})
+@router.get("/me", response={200: dict, 400: XResponseSchema})
 def get_user(request):
 
     try:
         user = request.auth    
-        
         if user is None:
             return XResponse(status_code=400, data=None, message="User not authenticated", status=False).response
         
-        
         user_object = User.objects.get(id=user.id)
-        hist = user_object.login_histories()
-        
-        
-        dt = {
-            "id": user.id,
-            "username": user.username,
-            "email": user.email,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "role": user.role,
-            "phone_number":user_object.phone_number,
-            'date_joined': user_object.date_joined,
-            "login_histories": hist
-            
-        }
-        
-        user_data = UserSerializer.model_validate(dt).model_dump()
-        return XResponse(status_code=200, data=user_data, message="Successful", status=True).response
+        response = UserSerializer.model_validate(user_object).model_dump()
+        return XResponse(status_code=200, data=response, message="Successful", status=True).response
     
     except Exception as e:
         return XResponse(status_code=400, data=None, message="Error occurred", status=False).response
@@ -168,7 +153,7 @@ def get_user(request):
     
 
 
-@router.post("/signout", response={200: dict, 400: dict})
+@router.post("/signout", response={200: dict, 400: XResponseSchema})
 def signout_user(request):
     try:
         user = request.auth
@@ -188,7 +173,7 @@ def signout_user(request):
 
 
 
-@router.put("/updateSignedUser", response={200: dict, 400: dict, 401: dict})
+@router.put("/updateSignedUser", response={200: dict, 400: XResponseSchema, 401: XResponseSchema})
 def auth_update_signed_user(request, data: UserUpdateSerializer):
     
     if not request.auth:

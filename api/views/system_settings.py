@@ -42,7 +42,7 @@ def save_system_settings(request, data: SettingsSerializer):
 
 
 
-@router.get("/settings")
+@router.get("/settings", auth=None)
 def get_system_settings(request):
     try:
         # user = request.auth

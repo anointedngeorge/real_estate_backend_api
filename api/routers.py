@@ -37,7 +37,7 @@ class GlobalAuthentication(HttpBearer):
             
             return user.first()
         except Exception as e:
-            print("failed to authenticate user...", e)
+            # print("failed to authenticate user...", e)
             return None
 
 
@@ -53,6 +53,9 @@ api = NinjaAPI(
 
 @api.exception_handler(ValidationError)
 def validation_handler(request, exc):
+    # print(exc.errors[0].get("msg", ""), "error")
+    # import traceback
+    # traceback.print_exc()
     return Response(
         {"errors": exc.errors[0].get("loc", []), "message": exc.errors[0].get("msg", "")},
         status=422
@@ -61,6 +64,8 @@ def validation_handler(request, exc):
 
 @api.exception_handler(Exception)
 def global_handler(request, exc):
+    import traceback
+    traceback.print_exc()
     return Response(
         {"detail": "Internal server error"},
         status=500

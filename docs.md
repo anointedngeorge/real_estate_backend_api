@@ -12,3 +12,5 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO realestate_user
 
 
 
+
+
