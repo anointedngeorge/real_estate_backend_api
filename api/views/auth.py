@@ -10,11 +10,12 @@ from api.models.users import LoginTracker, User
 from api.schema.usersSchema import LoginSchema, LoginSerializer, SignupSerializer, UserSerializer, UserUpdateSerializer, XResponseSchema
 from decouple import config
 from ninja.errors import HttpError
+from django.shortcuts import get_object_or_404
+
+
+
 
 router = Router(tags=["Administration/Authentication"])
-
-
-
 
 
 @router.post("/signin", response={200: LoginSchema, 400: XResponseSchema}, auth=None)
@@ -216,5 +217,41 @@ def auth_update_signed_user(request, data: UserUpdateSerializer):
             status_code=400,
             data=None,
             message="An error occurred while updating user",
+            status=False,
+        ).response
+        
+
+
+
+@router.put("/suspendUser/{user_id}", response={200: XResponseSchema, 400: XResponseSchema})
+def suspend_user(request, user_id:uuid.UUID ):
+    try:
+        user = get_object_or_404(User, pk=user_id)
+        
+        stat = False
+        message = "No action taken"
+        
+        if user.is_active == False:
+            stat = True
+            message = "User activated"
+            
+        if user.is_active == True:
+            stat = False
+            message = "User suspended"      
+
+        user.is_active = stat
+        user.save()        
+        return XResponse(
+            status_code=200,
+            data=None,
+            message=message,
+            status=True,
+        ).response
+        
+    except Exception as e:
+        return XResponse(
+            status_code=400,
+            data=None,
+            message=f"{e}",
             status=False,
         ).response

@@ -10,7 +10,12 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO realestate_user
 
 
 
+{
+  "username": "superadmin@realestate.com",
+  "password": "SuperAdmin!@123!%"
+}
 
 
+SuperAdmin!@123!%
 
 

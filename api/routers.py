@@ -5,6 +5,9 @@ from api.lib.message import XResponse
 from api.views.users import router as users_router
 from api.views.auth import router as auth_router
 from api.views.system_settings import router as system_router
+from api.views.realtors import router as realtors_router
+from api.views.clients import router as client_router
+from api.views.properties import router as property_router
 
 from ninja.errors import ValidationError, AuthenticationError
 from ninja.responses import Response
@@ -82,3 +85,6 @@ def global_handler_authorization(request, exc):
 api.add_router(router=auth_router, prefix="/auth")
 api.add_router(router=users_router, prefix="/users")
 api.add_router(router=system_router, prefix="/system")
+api.add_router(router=realtors_router, prefix="/realtors")
+api.add_router(router=client_router, prefix="/client")
+api.add_router(router=property_router, prefix="/properties")

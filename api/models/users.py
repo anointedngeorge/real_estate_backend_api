@@ -1,10 +1,14 @@
+from typing import Dict, List
 import uuid
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 from api.config.base import BaseModel
-from api.helpers.permission import get_role_permissions
+from api.helpers.permission import SYSTEM_ROLES, get_role_permissions
+from api.models.authorization import RolePermission, UserRole
+from django.shortcuts import get_object_or_404
+
 
 
 class User(AbstractUser):
@@ -16,16 +20,7 @@ class User(AbstractUser):
 
     role = models.CharField(
         max_length=50,
-        choices=[
-            ("admin", "Admin"),
-            ("agent", "Agent"),
-            ("buyer", "Buyer"),
-            ("super_admin", "Super Admin"),
-            ("manager", "Manager"),
-            ("finance_admin", "Finance Admin"),
-            ("sales_admin", "Sales Admin"),
-            ("marketing_admin", "Marketing Admin"),
-        ],
+        choices=SYSTEM_ROLES,
         default="buyer",
     )
 
@@ -41,15 +36,28 @@ class User(AbstractUser):
     
     @property
     def permissions(self):
-        permission_list = get_role_permissions(role=self.role)
-        print(permission_list, self.role)
-        return permission_list
+        try:
+            user_role = self.user_roles.select_related(
+                "role"
+            ).prefetch_related(
+                "permissions",
+                "role__role_permissions__permissions"
+            ).get()
 
+            iroles = user_role.transform_permissions()
+            return iroles
+
+        except UserRole.DoesNotExist:
+            return {"permissions": [], "extra_permissions": []  }
+    
+
+    
     @property
     def login_histories(self):
         hist = self.user_login_tracker.all()
         return [
-            {
+            {   
+                "id": x.id,
                 "user": x.user.get_fullname(),
                 "agent": x.agent,
                 "location": x.location,
@@ -58,6 +66,8 @@ class User(AbstractUser):
             }
             for x in hist
         ]
+
+
 
 
 class UserKyc(BaseModel):
