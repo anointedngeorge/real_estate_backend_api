@@ -40,7 +40,7 @@ def slug(text):
     )
 
 @router.post(
-    "/register_new_realtor",
+    "/create_property",
     response={
         200: XResponseData ,
         400: XResponseSchema,
@@ -132,9 +132,11 @@ def list_properties(request, query: UsersQuery = Query(...)):
 def update_users(request, data: PropertyUpdateSerializer2):
     try:
         user = get_object_or_404(Properties, pk=data.id)
+        
         # # remove None values only
-        payload = {k: v for k, v in data.data.model_dump(exclude_none=True).items()}
+        payload = {k: v for k, v in data.data.model_dump(exclude_none=True).items() if v !=  ""}
 
+        print(payload, 'loading...')
         for attr, value in payload.items():
             setattr(user, attr, value)
 

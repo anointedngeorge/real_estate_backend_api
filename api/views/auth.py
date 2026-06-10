@@ -235,12 +235,14 @@ def suspend_user(request, user_id:uuid.UUID ):
             stat = True
             message = "User activated"
             
-        if user.is_active == True:
+        elif user.is_active == True:
             stat = False
             message = "User suspended"      
 
         user.is_active = stat
-        user.save()        
+        user.save()
+        
+        print(user.is_active)
         return XResponse(
             status_code=200,
             data=None,

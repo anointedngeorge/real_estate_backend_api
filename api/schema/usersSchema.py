@@ -233,6 +233,7 @@ class RealtorReferralSerializer(BaseModel):
     email: str
     first_name: str
     role: str
+    is_active: bool
     last_name: str
     phone_number:Optional[str]=None
     date_joined: datetime
@@ -351,7 +352,7 @@ class ClientUpdateSerializer2(BaseModel):
 
 
 # properties schema
-StatusType = Literal['available','sold', 'reserved']
+StatusType = Literal['available', 'sold', 'reserved']
 PropertyTypes = Literal['land','house','apartment', 'commercial']
 class PropertySchema(Schema):
     name: str
@@ -394,18 +395,25 @@ class PropertyListResponse(Schema):
 
 
 class PropertySchema1(Schema):
-    name: str = None
-    image: str = None
-    description: str = None
-    location: str = None
-    status: StatusType = None
-    property_types: PropertyTypes = None
-    actual_price: float = None
-    selling_price: float = None
-    features: dict = None
+    name: Optional[str] = None
+    image: Optional[str] = None
+    description: Optional[str] = None
+    location: Optional[str] = None
+    status: Optional[StatusType] = None
+    property_types: Optional[PropertyTypes] = None
+    actual_price: Optional[int | float | str] = None
+    selling_price: Optional[int| float] = None
+    features: Optional[dict] = None
     
     class Config:
         from_attributes = True
+        
+    # @staticmethod
+    # def resolve_actual_price(cls, context):
+    #     p = cls.get("actual_price")
+    #     print(isinstance(p, str), p)
+    #     # if cls.get("actual_price") != None:
+    #     #     return float(cls.get('actual_price'))
 
 
 class PropertyUpdateSerializer2(BaseModel):
