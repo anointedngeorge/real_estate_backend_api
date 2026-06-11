@@ -16,7 +16,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-f2^)s*hn*y_rix*@7vtk(
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["api.sharashelltechnology.com"]
 
 # Application definition
 
