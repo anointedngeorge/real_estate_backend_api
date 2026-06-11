@@ -169,7 +169,7 @@ class XResponseSchema(BaseModel):
 class RealtorSignupSerializer(Schema):
     first_name: str
     last_name: str
-    phone_number: str = Field(..., pattern=r'^\+?1?\d{9,15}$')
+    phone_number: str = Field(..., pattern=r'^\+?1?\d{11,15}$')
     email: EmailStr
     password: str= Field(..., min_length=6, max_length=17)
     sponsor: str = None
