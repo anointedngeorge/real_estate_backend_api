@@ -8,6 +8,7 @@ from api.views.system_settings import router as system_router
 from api.views.realtors import router as realtors_router
 from api.views.clients import router as client_router
 from api.views.properties import router as property_router
+from api.views.sales import router as sales_router
 
 from ninja.errors import ValidationError, AuthenticationError
 from ninja.responses import Response
@@ -88,3 +89,4 @@ api.add_router(router=system_router, prefix="/system")
 api.add_router(router=realtors_router, prefix="/realtors")
 api.add_router(router=client_router, prefix="/client")
 api.add_router(router=property_router, prefix="/properties")
+api.add_router(router=sales_router, prefix="/sales")

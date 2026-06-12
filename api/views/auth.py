@@ -15,7 +15,7 @@ from django.shortcuts import get_object_or_404
 
 
 
-router = Router(tags=["Administration/Authentication"])
+router = Router(tags=["Authentication"])
 
 
 @router.post("/signin", response={200: LoginSchema, 400: XResponseSchema}, auth=None)

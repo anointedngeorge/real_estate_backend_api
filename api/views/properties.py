@@ -136,7 +136,7 @@ def update_users(request, data: PropertyUpdateSerializer2):
         # # remove None values only
         payload = {k: v for k, v in data.data.model_dump(exclude_none=True).items() if v !=  ""}
 
-        print(payload, 'loading...')
+        # print(payload, 'loading...')
         for attr, value in payload.items():
             setattr(user, attr, value)
 

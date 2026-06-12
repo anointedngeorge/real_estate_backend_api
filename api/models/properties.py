@@ -32,6 +32,13 @@ class Properties(BaseModel):
     selling_price = models.DecimalField(max_digits=20, decimal_places=2, default=0.0)
     features = models.JSONField(default=dict)
     
+    has_plots = models.BooleanField(default=False )
+    
     # 
     def __str__(self):
         return super().__str__()
+    
+
+
+class PropertyPlots(BaseModel):
+    pass

@@ -8,7 +8,7 @@ from api.models.users import  BlackListedTokens
 APP = "api"
 # age = 24hrs
 MAX_ACCESS_TOKEN_AGE = timedelta(hours=24)
-CLOCK_SKEW = timedelta(seconds=30)
+CLOCK_SKEW = timedelta(hours=24)
 
 def generate_access_token(user, secret_key, algorithm="HS256"):
     now = datetime.now(timezone.utc)
