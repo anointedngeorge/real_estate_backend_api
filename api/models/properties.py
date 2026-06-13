@@ -21,7 +21,7 @@ class PropertyTypes(models.TextChoices):
 
 
 class Properties(BaseModel):
-    name = models.CharField(max_length=150)
+    name = models.CharField(max_length=150, unique=True)
     image = models.CharField(max_length=250, null=True, blank=True)
     slug = models.CharField(max_length=150)
     location = models.CharField(max_length=150)
@@ -41,4 +41,9 @@ class Properties(BaseModel):
 
 
 class PropertyPlots(BaseModel):
-    pass
+    properties = models.ForeignKey("api.Properties", on_delete=models.CASCADE)
+    plot_number = models.CharField(max_length=150)
+    plot_price = models.DecimalField(max_digits=20, decimal_places=2)
+    uid = models.CharField(max_length=250)
+    
+    

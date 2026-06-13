@@ -9,7 +9,7 @@ from ninja.pagination import paginate, PageNumberPagination
 from ninja import Form, Router, Query, Field, Schema
 
 from api.lib.message import XResponse
-from api.models.properties import Properties
+from api.models.properties import Properties, PropertyPlots
 from api.models.realtors import Realtors, Referrals
 from api.models.users import User
 from api.schema.generalSchema import ResultSerializer
@@ -51,12 +51,17 @@ def slug(text):
 def create_new_property(request, data: PropertySchema):
     try:
         model = Properties
-        payload = data.model_dump()
+        payload = data.model_dump(exclude="plots")
         payload.update({
             "slug": slug(text=data.name)
         })
+        
+        print(type(data.plots), payload)
         new_property = model.objects.create(**payload)
-    
+        if (data.plots) > 1:
+            _, created = PropertyPlots.objects.bulk_create(data.plots)
+            print(created, "Created")
+            
         dt = PropertySchema.model_validate(new_property).model_dump()
         return XResponse(
             status_code=200,
@@ -64,7 +69,6 @@ def create_new_property(request, data: PropertySchema):
             message=f"New Property ({new_property.name}) created successfully",
             status=True,
         ).response
-
     except Exception as e:
         return XResponse(
             status_code=400,

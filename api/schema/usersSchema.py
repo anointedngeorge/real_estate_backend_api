@@ -364,7 +364,7 @@ class PropertySchema(Schema):
     actual_price: float
     selling_price: float = 0.0
     features: dict = {}
-    
+    plots: List = {}
     class Config:
         from_attributes = True
 
