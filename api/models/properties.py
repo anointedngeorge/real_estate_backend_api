@@ -3,6 +3,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 from api.config.base import BaseModel
+from api.schema.usersSchema import PropertiesPlotsSchema
 
 
 class StatusType(models.TextChoices):
@@ -31,19 +32,25 @@ class Properties(BaseModel):
     actual_price = models.DecimalField(max_digits=20, decimal_places=2)
     selling_price = models.DecimalField(max_digits=20, decimal_places=2, default=0.0)
     features = models.JSONField(default=dict)
-    
-    has_plots = models.BooleanField(default=False )
+    has_plots = models.BooleanField(default=False)
     
     # 
     def __str__(self):
-        return super().__str__()
+        return self.name
+    
+    @property
+    def plots(self):
+        qs = self.properties_plots.filter(status=False)
+        rp = [PropertiesPlotsSchema.validate(x).model_dump() for x in qs]
+        return rp
     
 
 
 class PropertyPlots(BaseModel):
-    properties = models.ForeignKey("api.Properties", on_delete=models.CASCADE)
-    plot_number = models.CharField(max_length=150)
+    properties = models.ForeignKey("api.Properties", on_delete=models.CASCADE, related_name="properties_plots")
+    plot_number = models.CharField(max_length=150, unique=True)
     plot_price = models.DecimalField(max_digits=20, decimal_places=2)
-    uid = models.CharField(max_length=250)
+    uid = models.CharField(max_length=250, unique=True)
+    status = models.BooleanField(default=False )
     
     

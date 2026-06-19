@@ -209,8 +209,8 @@ class RealtorSerializer(BaseModel):
 class RealtorSerializer_(BaseModel):
     # id: uuid.UUID
     # email: str
-    first_name: str
-    last_name: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
     account_name: Optional[str] = None
     bank_name : Optional[str] = None
     bank_type: Optional[str] = None
@@ -223,9 +223,9 @@ class RealtorSerializer_(BaseModel):
 
 
 class RealtorReferralSerializer2(BaseModel):
-    id: uuid.UUID = None
+    # id: uuid.UUID = None
     realtor: RealtorSerializer_ = None
-    sponsor: List[RealtorSerializer_] = []
+    sponsor: Optional[RealtorSerializer_] = None
 
 
 class RealtorReferralSerializer(BaseModel):
@@ -245,7 +245,7 @@ class RealtorReferralSerializer(BaseModel):
     bank_name : Optional[str] = None
     bank_type: Optional[str] = None
     bank_number: Optional[str] = None
-    referralList: List[RealtorReferralSerializer2] = []
+    referralList: Optional[RealtorReferralSerializer2] = None
     
 
     class Config:
@@ -364,10 +364,22 @@ class PropertySchema(Schema):
     actual_price: float
     selling_price: float = 0.0
     features: dict = {}
-    plots: List = {}
+    plots: List = []
     class Config:
         from_attributes = True
 
+
+
+
+class PropertiesPlotsSchema(Schema):
+    id: uuid.UUID
+    plot_number: int
+    plot_price: float
+    uid: str
+    
+    class Config:
+        from_attributes = True
+    
 
 
 class PropertyListSchema(Schema):
@@ -381,6 +393,7 @@ class PropertyListSchema(Schema):
     actual_price: float
     selling_price: float = 0.0
     features: dict = {}
+    plots: List[PropertiesPlotsSchema] = []
     
     class Config:
         from_attributes = True
@@ -389,6 +402,8 @@ class PropertyListSchema(Schema):
 class PropertyListResponse(Schema):
     page: int
     count: int
+    page_numbers:list = []
+    page_sizes: list = []
     stats: Dict = {}
     items: List[PropertyListSchema]
 
@@ -408,14 +423,6 @@ class PropertySchema1(Schema):
     class Config:
         from_attributes = True
         
-    # @staticmethod
-    # def resolve_actual_price(cls, context):
-    #     p = cls.get("actual_price")
-    #     print(isinstance(p, str), p)
-    #     # if cls.get("actual_price") != None:
-    #     #     return float(cls.get('actual_price'))
-
-
 class PropertyUpdateSerializer2(BaseModel):
     id: uuid.UUID
     data: PropertySchema1

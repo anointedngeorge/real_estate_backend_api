@@ -10,10 +10,18 @@ from ninja import Form, Router, Query, Field, Schema
 from django.db.models import F, Q, Sum
 from api.lib.message import XResponse
 from api.models.clients import EstateClients
+from api.models.properties import PropertyPlots
 from api.models.realtors import Realtors
-from api.models.sales import DateTracker, Sales
+from api.models.sales import DateTracker, Sales, SalesPaymentPlan, SalesPlot
 from api.models.users import User
-from api.schema.generalSchema import SalesInSchema, SalesOutSchema, SalesOutSchema2
+from api.schema.generalSchema import (
+    SalesInSchema,
+    SalesOutSchema,
+    SalesOutSchema2,
+    SalesPaymentPlanInSchema,
+    SalesPaymentPlanInSchema2,
+    SalesPaymentPlanUpdateSchema,
+)
 from api.schema.usersSchema import (
     XResponseData,
     XResponseSchema,
@@ -32,12 +40,12 @@ router = Router(tags=["Sales Management"])
     },
 )
 @transaction.atomic
-def create_new_sales(request, data: SalesInSchema):
+def create_new_sales_post(request, data: SalesInSchema):
     try:
         client = EstateClients.objects.get(email=data.client)
         realtor = Realtors.objects.get(email=data.realtor)
 
-        payload = data.model_dump(exclude={"client", "realtor"})
+        payload = data.model_dump(exclude={"client", "realtor", "plots"})
 
         # set year
         year = timezone.now().year
@@ -52,6 +60,14 @@ def create_new_sales(request, data: SalesInSchema):
             DateTracker.objects.get_or_create(
                 year=timezone.now().year, month=timezone.now().month
             )
+            # check if sales has plots
+            if data.plots:
+                sp = SalesPlot.objects.create(sales_id=sale.id)
+
+                for plot_id in data.plots:
+                    sp.plots.add(plot_id)
+
+                PropertyPlots.objects.filter(id__in=data.plots).update(status=True)
 
         return XResponse(
             status_code=200,
@@ -64,7 +80,7 @@ def create_new_sales(request, data: SalesInSchema):
         return XResponse(
             status_code=404,
             data=None,
-            message="Client not found",
+            message=f"Client with this email ({data.client}) not found.",
             status=False,
         ).response
 
@@ -77,6 +93,9 @@ def create_new_sales(request, data: SalesInSchema):
         ).response
 
     except Exception as e:
+        import traceback
+
+        traceback.print_exc()
         return XResponse(
             status_code=400,
             data=None,
@@ -146,7 +165,7 @@ def list_sales(request, query: UsersQuery = Query(...)):
                     {"month": "Oct", "sales": 25, "revenue": 520000000},
                     {"month": "Nov", "sales": 20, "revenue": 445000000},
                     {"month": "Dec", "sales": 12, "revenue": 280000000},
-                ]
+                ],
             },
             "items": list(page_obj.object_list),
         }
@@ -156,5 +175,95 @@ def list_sales(request, query: UsersQuery = Query(...)):
             status_code=400,
             data=None,
             message="An error occurred",
+            status=False,
+        ).response
+
+
+@router.post(
+    "/create_sales_payment_plan",
+    response={
+        200: XResponseData,
+        400: XResponseSchema,
+        # RealtorSerializer
+    },
+)
+@transaction.atomic
+def create_sales_payment_plan(request, data: SalesPaymentPlanInSchema):
+    try:
+        sale = get_object_or_404(Sales, id=data.sales_id)
+
+        if sale:
+            prop = (
+                sale.properties.selling_price
+                if sale.properties.selling_price > 0
+                else sale.properties.actual_price
+            )
+            sale_amount = prop - sale.amount
+
+            remaining_balance = float(sale_amount / len(data.billing_dates))
+
+            #
+            billing_dates = data.billing_dates
+            payload = data.model_dump(exclude=["billing_dates"])
+
+            payload_data_list = []
+
+            for x in billing_dates:
+                payload_data = {
+                    **payload,
+                    "billing_date": x,
+                    "billing_amount_to_pay": remaining_balance,
+                }
+                payload_data_list.append(SalesPaymentPlan(**payload_data))
+
+        # SalesPaymentPlan.objects.bulk_create(payload_data_list)
+        with transaction.atomic():
+            SalesPaymentPlan.objects.filter(
+                sales_id=data.sales_id
+            ).delete()
+
+            SalesPaymentPlan.objects.bulk_create(payload_data_list)
+
+        return XResponse(
+            status_code=200,
+            data=None,
+            message=f"Sales Payment Plan created",
+            status=True,
+        ).response
+
+    except EstateClients.DoesNotExist:
+        return XResponse(
+            status_code=404,
+            data=None,
+            message=f"Client with this email ({data.client}) not found.",
+            status=False,
+        ).response
+        
+        
+@router.put("/update_sales_payment_plan")
+@transaction.atomic
+def update_sales_payment_plan(request, data: SalesPaymentPlanUpdateSchema):
+    try:
+        plan = get_object_or_404(
+            SalesPaymentPlan,
+            id=data.id
+        )
+
+        plan.amount = data.billing_amount_to_pay
+        plan.status = "completed"
+        plan.save()
+
+        return XResponse(
+            status_code=200,
+            data=None,
+            message="Sales Payment Plan updated",
+            status=True,
+        ).response
+
+    except SalesPaymentPlan.DoesNotExist:
+        return XResponse(
+            status_code=404,
+            data=None,
+            message="Payment plan not found",
             status=False,
         ).response

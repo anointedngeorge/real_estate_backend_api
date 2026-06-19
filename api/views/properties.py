@@ -8,6 +8,7 @@ from django.db.models import F, Q, Sum
 from ninja.pagination import paginate, PageNumberPagination
 from ninja import Form, Router, Query, Field, Schema
 
+from api.helpers.helper import stepsCounter
 from api.lib.message import XResponse
 from api.models.properties import Properties, PropertyPlots
 from api.models.realtors import Realtors, Referrals
@@ -55,12 +56,10 @@ def create_new_property(request, data: PropertySchema):
         payload.update({
             "slug": slug(text=data.name)
         })
-        
-        print(type(data.plots), payload)
         new_property = model.objects.create(**payload)
-        if (data.plots) > 1:
-            _, created = PropertyPlots.objects.bulk_create(data.plots)
-            print(created, "Created")
+        if new_property:
+            p = [PropertyPlots(**{**i, "properties_id": str(new_property.pk)}) for i in list(data.plots)]
+            PropertyPlots.objects.bulk_create(p)
             
         dt = PropertySchema.model_validate(new_property).model_dump()
         return XResponse(
@@ -91,8 +90,8 @@ class UsersQuery(Schema):
 @router.get("/list", response=PropertyListResponse)
 # @paginate(PageNumberPagination, pass_parameter="pagination_info")
 def list_properties(request, query: UsersQuery = Query(...)):
-    size = query.size
-    page = query.page
+    size = int(query.size)
+    page =int(query.page)
     try:
         filters = Q()
         model = Properties
@@ -106,14 +105,19 @@ def list_properties(request, query: UsersQuery = Query(...)):
             filters &= Q(status=query.status)
 
         qs= model.objects.filter(filters)
-        paginator = Paginator(qs, size)
+    
+        paginator = Paginator(qs, size, allow_empty_first_page=True)
         page_obj = paginator.get_page(page)
-
         count = paginator.count
+        print(paginator.num_pages)
+        pageSizes = stepsCounter(paginator=paginator.count)
+        page_numbers = stepsCounter(paginator=paginator.num_pages, start=1, stop=1)
         # apply paginator using from django.core.paginator import Paginator
         return {
             "page": page,
             "count": count,
+            "page_numbers": page_numbers,
+            "page_sizes": pageSizes,
             "stats": {
                 "total": count,
                 "sold": qs.filter(status="sold").count(),
